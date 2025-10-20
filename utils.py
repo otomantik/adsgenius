@@ -636,16 +636,59 @@ SECTOR_TEMPLATES = {
             'bedava', 'ücretsiz', 'iş ilanı', 'eleman',
             'maaş', 'kurs', 'sertifika'
         ]
+    },
+    'Antique Dealers': {
+        'business_types': ['Antika Satış', 'Antika Mağazası', 'Vintage Koleksiyon', 'Antika Galeri'],
+        'places_api_keyword': 'antique shop',  # Google Places search term
+        'avg_ticket': 2500,  # TL
+        'conversion_rate_range': (0.05, 0.12),
+        'negative_keywords': [
+            'bedava antika', 'ücretsiz değerleme', 'sadece görüntüleme',
+            'müze', 'sergi', 'eğitim', 'kurs'
+        ]
+    },
+    'Silver Dealers': {
+        'business_types': ['Gümüşçü', 'Gümüş Takı', 'Gümüş Ev Eşyası', 'Gümüş Aksesuar'],
+        'places_api_keyword': 'silver dealer',  # Google Places search term
+        'avg_ticket': 1800,  # TL
+        'conversion_rate_range': (0.06, 0.14),
+        'negative_keywords': [
+            'bedava gümüş', 'ücretsiz temizlik', 'sadece tamir',
+            'hurda', 'eritme', 'sadece görüntüleme'
+        ]
     }
 }
 
+
+# ============================================================================
+# CSV FILE SELECTION FUNCTION
+# ============================================================================
+
+def get_csv_file_for_sector(sector_name: str) -> str:
+    """
+    Get appropriate CSV file for the given sector
+    
+    Args:
+        sector_name: Business sector name
+    
+    Returns:
+        Path to CSV file or None if not available
+    """
+    sector_csv_mapping = {
+        'Battery Dealers': 'data/istanbul_all_batteries_with_ads.csv',
+        'Antique Dealers': 'data/istanbul_antique_silver_dealers.csv',
+        'Silver Dealers': 'data/istanbul_antique_silver_dealers.csv',
+        'Antique & Silver': 'data/istanbul_antique_silver_dealers.csv'
+    }
+    
+    return sector_csv_mapping.get(sector_name, None)
 
 # ============================================================================
 # MAIN DATA GENERATION FUNCTION
 # ============================================================================
 
 @st.cache_data(ttl=3600)  # Cache for 1 hour
-def load_and_process_data(sector_name: str, location_name: str, cache_version: int = 2) -> Dict[str, pd.DataFrame]:
+def load_and_process_data(sector_name: str, location_name: str, cache_version: int = 3) -> Dict[str, pd.DataFrame]:
     """
     Main data generation function - Creates simulated market and ads data
     
@@ -673,9 +716,10 @@ def load_and_process_data(sector_name: str, location_name: str, cache_version: i
     places = []
     
     # PRIORITY 1: Try to load from CSV (faster, comprehensive, saves API quota)
-    if USE_CSV_PLACES_DATA and os.path.exists(CSV_PLACES_FILE):
-        st.info(f"📂 Loading pre-fetched competitor data from CSV ({CSV_PLACES_FILE})...")
-        places = load_places_from_csv(CSV_PLACES_FILE)
+    csv_file = get_csv_file_for_sector(sector_name)
+    if USE_CSV_PLACES_DATA and csv_file and os.path.exists(csv_file):
+        st.info(f"📂 Loading pre-fetched competitor data from CSV ({csv_file})...")
+        places = load_places_from_csv(csv_file)
         
         if places:
             st.info(f"🔍 Processing {len(places)} places with {len(districts)} districts...")
