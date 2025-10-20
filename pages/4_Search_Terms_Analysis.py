@@ -79,21 +79,55 @@ if 'search_terms_data' not in st.session_state:
 st.sidebar.markdown("## 🎯 Analysis Configuration")
 st.sidebar.markdown("---")
 
-# File selection
-available_files = []
-for file in os.listdir('data'):
-    if 'arama_terimleri' in file.lower() and file.endswith('.csv'):
-        available_files.append(file)
+# File selection options
+st.sidebar.markdown("### 📁 Data Source")
 
-if available_files:
-    selected_file = st.sidebar.selectbox(
-        "**Select Search Terms File**",
-        available_files,
-        help="Choose the search terms CSV file to analyze"
+upload_option = st.sidebar.radio(
+    "Choose data source:",
+    ["Upload CSV File", "Use Existing File"],
+    help="Upload your own CSV or use existing data"
+)
+
+selected_file = None
+uploaded_df = None
+
+if upload_option == "Upload CSV File":
+    st.sidebar.markdown("### 📤 Upload Your CSV")
+    
+    uploaded_file = st.sidebar.file_uploader(
+        "Choose a CSV file",
+        type="csv",
+        help="Upload your search terms CSV file with columns: Arama terimi, Maliyet, Dönüşümler, Tıklamalar, Gösterimler"
     )
+    
+    if uploaded_file is not None:
+        try:
+            uploaded_df = pd.read_csv(uploaded_file, encoding='utf-8-sig')
+            st.sidebar.success(f"✅ File uploaded: {uploaded_file.name}")
+            st.sidebar.info(f"📊 {len(uploaded_df)} keywords loaded")
+        except Exception as e:
+            st.sidebar.error(f"❌ Error loading file: {str(e)}")
+            st.stop()
+    else:
+        st.sidebar.info("👆 Please upload a CSV file to continue")
+        st.stop()
+
 else:
-    st.sidebar.error("No search terms CSV files found in data/ folder")
-    st.stop()
+    # Use existing files
+    available_files = []
+    for file in os.listdir('data'):
+        if 'arama_terimleri' in file.lower() and file.endswith('.csv'):
+            available_files.append(file)
+
+    if available_files:
+        selected_file = st.sidebar.selectbox(
+            "**Select Search Terms File**",
+            available_files,
+            help="Choose the search terms CSV file to analyze"
+        )
+    else:
+        st.sidebar.error("No search terms CSV files found in data/ folder")
+        st.stop()
 
 # Analysis parameters
 st.sidebar.markdown("### 📊 Analysis Parameters")
@@ -130,10 +164,13 @@ st.sidebar.markdown("---")
 
 # Load and analyze data
 @st.cache_data
-def load_and_analyze_search_terms(file_path):
+def load_and_analyze_search_terms(file_path=None, uploaded_df=None):
     """Load and analyze search terms data"""
     try:
-        df = pd.read_csv(file_path, encoding='utf-8-sig')
+        if uploaded_df is not None:
+            df = uploaded_df.copy()
+        else:
+            df = pd.read_csv(file_path, encoding='utf-8-sig')
         
         # Clean column names
         df.columns = df.columns.str.strip()
@@ -165,7 +202,10 @@ def load_and_analyze_search_terms(file_path):
         return None
 
 # Load data
-df = load_and_analyze_search_terms(f'data/{selected_file}')
+if upload_option == "Upload CSV File" and uploaded_df is not None:
+    df = load_and_analyze_search_terms(uploaded_df=uploaded_df)
+else:
+    df = load_and_analyze_search_terms(file_path=f'data/{selected_file}')
 
 if df is not None:
     st.session_state.search_terms_data = df
