@@ -253,25 +253,57 @@ if not filtered_competitors.empty:
         combined_intelligence['CVR'] = np.random.uniform(0.015, 0.035, len(combined_intelligence))
         combined_intelligence['CPA'] = np.random.uniform(40, 80, len(combined_intelligence))
     
-    # Select and display key columns
+    # Select and display key columns - with error handling
     display_columns = [
         'Business_Name', 'District', 'Targeting_Priority_Index', 
         'Competitive_Pressure_Score', 'CVR', 'CPA', 'Distance_From_Center_KM',
         'Has_Ads', 'Ads_Confidence', 'Phone_Number', 'Website'
     ]
     
-    intelligence_table = combined_intelligence[display_columns].copy()
-    intelligence_table.columns = [
-        'Business Name', 'District', 'TPI Score', 'CPS', 'Actual CVR', 'Actual CPA', 'Distance (km)',
-        'Has Ads', 'Ads Confidence', 'Phone', 'Website'
-    ]
+    # Check which columns actually exist
+    available_columns = combined_intelligence.columns.tolist()
+    existing_columns = [col for col in display_columns if col in available_columns]
     
-    # Sort by TPI score
-    intelligence_table = intelligence_table.sort_values('TPI Score', ascending=False)
+    # If no expected columns exist, use available ones
+    if not existing_columns:
+        existing_columns = available_columns[:8]  # Take first 8 columns
+    
+    try:
+        intelligence_table = combined_intelligence[existing_columns].copy()
+        
+        # Create column mapping for display names
+        column_mapping = {
+            'Business_Name': 'Business Name',
+            'District': 'District',
+            'Targeting_Priority_Index': 'TPI Score',
+            'Competitive_Pressure_Score': 'CPS',
+            'CVR': 'Actual CVR',
+            'CPA': 'Actual CPA',
+            'Distance_From_Center_KM': 'Distance (km)',
+            'Has_Ads': 'Has Ads',
+            'Ads_Confidence': 'Ads Confidence',
+            'Phone_Number': 'Phone',
+            'Website': 'Website'
+        }
+        
+        # Rename columns using mapping, fallback to original name if not in mapping
+        intelligence_table.columns = [column_mapping.get(col, col) for col in existing_columns]
+        
+    except Exception as e:
+        st.error(f"Error creating intelligence table: {str(e)}")
+        st.write(f"Available columns: {available_columns}")
+        # Fallback: show raw data
+        intelligence_table = combined_intelligence.head(10)
+    
+    # Sort by TPI score if column exists
+    if 'TPI Score' in intelligence_table.columns:
+        intelligence_table = intelligence_table.sort_values('TPI Score', ascending=False)
+    elif 'Targeting_Priority_Index' in intelligence_table.columns:
+        intelligence_table = intelligence_table.sort_values('Targeting_Priority_Index', ascending=False)
     
     st.dataframe(intelligence_table, use_container_width=True)
     
-    # Summary statistics
+    # Summary statistics - with error handling
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
@@ -281,16 +313,24 @@ if not filtered_competitors.empty:
         )
     
     with col2:
-        st.metric(
-            "Avg TPI Score",
-            f"{filtered_competitors['Targeting_Priority_Index'].mean():.1f}"
-        )
+        try:
+            if 'Targeting_Priority_Index' in filtered_competitors.columns:
+                avg_tpi = filtered_competitors['Targeting_Priority_Index'].mean()
+                st.metric("Avg TPI Score", f"{avg_tpi:.1f}")
+            else:
+                st.metric("Avg TPI Score", "N/A")
+        except:
+            st.metric("Avg TPI Score", "N/A")
     
     with col3:
-        st.metric(
-            "Avg Distance",
-            f"{filtered_competitors['Distance_From_Center_KM'].mean():.1f} km"
-        )
+        try:
+            if 'Distance_From_Center_KM' in filtered_competitors.columns:
+                avg_distance = filtered_competitors['Distance_From_Center_KM'].mean()
+                st.metric("Avg Distance", f"{avg_distance:.1f} km")
+            else:
+                st.metric("Avg Distance", "N/A")
+        except:
+            st.metric("Avg Distance", "N/A")
     
     with col4:
         st.metric(
