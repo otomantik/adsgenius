@@ -29,10 +29,9 @@ ENV/
 .env
 *.key
 
-# Data files (büyük dosyalar) - sadece örnek dosyaları tut
-data/*.csv
-*.csv
-!data/README_CSV_FORMAT.md
+# Data files - sadece büyük dosyaları ignore et
+# CSV dosyaları Railway deploy için gerekli
+!data/*.csv
 
 # Temporary files
 *.tmp
