@@ -26,7 +26,6 @@ env/
 ENV/
 
 # API Keys (ÖNEMLİ!)
-config.py
 .env
 *.key
 
